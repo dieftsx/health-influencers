@@ -32,7 +32,4 @@ Before you begin, ensure you have the following installed:
 - Node.js (v14.x or later)
 - npm (v6.x or later) or yarn (v1.22.x or later)
 
-## Installation
-
-1. Clone the repository:
 
