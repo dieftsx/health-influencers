@@ -6,20 +6,13 @@ import { generateText } from 'ai';
 interface VerificationResult {
   isVerified: boolean;
   confidence: number;
-  sources: string[];
   explanation: string;
 }
 
 export async function verifyWithConsensus(claim: string): Promise<VerificationResult> {
   const apiKey = process.env.CONSENSUS_API_KEY;
   if (!apiKey) {
-    console.error('Consensus API key is not set');
-    return {
-      isVerified: false,
-      confidence: 0,
-      sources: [],
-      explanation: 'Unable to verify due to missing API key'
-    };
+    throw new Error('Consensus API key is not set');
   }
 
   try {
@@ -39,69 +32,62 @@ export async function verifyWithConsensus(claim: string): Promise<VerificationRe
 
     return {
       isVerified: supportingPapers.length > 0,
-      confidence: supportingPapers.length / papers.length * 100,
-      sources: supportingPapers.map((paper: any) => paper.url),
+      confidence: (supportingPapers.length / papers.length) * 100,
       explanation: `Found ${supportingPapers.length} supporting papers out of ${papers.length} relevant papers.`
     };
   } catch (error) {
     console.error('Consensus API error:', error);
-    return {
-      isVerified: false,
-      confidence: 0,
-      sources: [],
-      explanation: 'Error occurred while verifying with Consensus'
-    };
+    throw error;
   }
 }
 
 export async function verifyWithPerplexity(claim: string): Promise<VerificationResult> {
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) {
-    console.error('Perplexity API key is not set');
-    return {
-      isVerified: false,
-      confidence: 0,
-      sources: [],
-      explanation: 'Unable to verify due to missing API key'
-    };
+    throw new Error('Perplexity API key is not set');
   }
 
   try {
-    const response = await axios.post('https://api.perplexity.ai/verify', {
-      query: claim
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+      model: "pplx-7b-chat",
+      messages: [
+        {
+          role: "system",
+          content: "You are an AI assistant tasked with verifying health claims. Analyze the given claim and provide a verification result."
+        },
+        {
+          role: "user",
+          content: `Verify the following health claim: "${claim}"`
+        }
+      ]
     }, {
       headers: {
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
       }
     });
 
+    const aiResponse = response.data.choices[0].message.content;
+    
+    // Parse the AI response to determine verification result
+    const isVerified = aiResponse.toLowerCase().includes('verified') || aiResponse.toLowerCase().includes('supported by evidence');
+    const confidence = isVerified ? 80 : 20; // Simplified confidence calculation
+
     return {
-      isVerified: response.data.verification_score > 0.7,
-      confidence: response.data.verification_score * 100,
-      sources: response.data.sources || [],
-      explanation: response.data.explanation
+      isVerified,
+      confidence,
+      explanation: aiResponse
     };
   } catch (error) {
     console.error('Perplexity API error:', error);
-    return {
-      isVerified: false,
-      confidence: 0,
-      sources: [],
-      explanation: 'Error occurred while verifying with Perplexity'
-    };
+    throw error;
   }
 }
 
 export async function verifyWithOpenAI(claim: string): Promise<VerificationResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    console.error('OpenAI API key is not set');
-    return {
-      isVerified: false,
-      confidence: 0,
-      sources: [],
-      explanation: 'Unable to verify due to missing API key'
-    };
+    throw new Error('OpenAI API key is not set');
   }
 
   try {
@@ -111,7 +97,6 @@ export async function verifyWithOpenAI(claim: string): Promise<VerificationResul
               Format your response as JSON with the following fields:
               - isVerified (boolean)
               - confidence (number between 0-100)
-              - sources (array of URLs)
               - explanation (string)`,
     });
 
@@ -119,12 +104,7 @@ export async function verifyWithOpenAI(claim: string): Promise<VerificationResul
     return result;
   } catch (error) {
     console.error('OpenAI API error:', error);
-    return {
-      isVerified: false,
-      confidence: 0,
-      sources: [],
-      explanation: 'Error occurred while verifying with OpenAI'
-    };
+    throw error;
   }
 }
 

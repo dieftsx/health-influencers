@@ -3,7 +3,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Users, Settings, LogOut, User } from 'lucide-react'
+import { LayoutDashboard, Users, Settings, LogOut, User, Search } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import {
   Sidebar,
@@ -22,6 +22,7 @@ const menuItems = [
   { icon: User, label: "Influencer Dashboard", href: "/dashboard/1" },
   { icon: Users, label: "Leaderboard", href: "/leaderboard" },
   { icon: Settings, label: "Research Config", href: "/research-config" },
+  { icon: Search, label: "Search Influencers", href: "/search" },
 ]
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
